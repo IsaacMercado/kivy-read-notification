@@ -1,0 +1,7 @@
+kivy
+httpx
+beautifulsoup4
+peewee
+pyjnius
+Cython
+buildozer
