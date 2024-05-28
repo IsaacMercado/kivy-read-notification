@@ -1,0 +1,22 @@
+<BookListScreen>:
+    BoxLayout:
+        orientation: "vertical"
+        padding: "50dp"
+
+        Label:
+            text: "Book List"
+            font_size: 30
+            size_hint_y: None
+
+        RecycleView:
+            id: rv
+            viewclass: 'Label'
+            data: root.books
+
+            RecycleBoxLayout:
+                default_size: None, dp(56)
+                default_size_hint: 1, None
+                size_hint_y: None
+                height: self.minimum_height
+                orientation: 'vertical'
+                spacing: 10

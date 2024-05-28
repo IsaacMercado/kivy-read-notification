@@ -1,18 +1,18 @@
-BoxLayout:
-    orientation: 'vertical'
+#: include ./src/auth/screens/login.kv
+#: include ./src/books/screens/book.kv
+#: include ./src/books/screens/book_list.kv
 
-    Button:
-        text: 'Tap for Google.\nBack button/gesture to return.'
-        on_press: app.view_google()
+ScreenManager:
+    id: screen_manager
 
-    Button:
-        text: 'Tap for local file.\nBack button/gesture to return.'
-        on_press: app.view_local_file()
+    BookListScreen:
+        id: book_list_screen
+        name: 'book_list'
 
-    Button:
-        text: 'List downloads'
-        on_press: app.view_downloads()
+    BookScreen:
+        id: book_screen
+        name: 'book'
 
-    Label:
-        id: list_downloads
-        text: ''
+    LoginScreen:
+        id: login_screen
+        name: 'login'

@@ -1,0 +1,31 @@
+<LoginScreen>:
+    BoxLayout:
+        orientation: "vertical"
+        padding: "50dp"
+
+        Label:
+            text: "Welcome"
+            font_size: 48
+
+        BoxLayout:
+            orientation: "vertical"
+
+            Label:
+                text: "Email"
+
+            TextInput:
+                multiline: False
+
+            Label:
+                text: "Password"
+
+            TextInput:
+                multiline: False
+
+            Widget:
+
+            Button:
+                text: "Login"
+                on_release: print('Hello')
+
+        Widget:

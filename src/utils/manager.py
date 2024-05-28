@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 
 from bs4 import BeautifulSoup
 from faker import Faker
+from itertools import chain
 from httpx import Client
 
 re_url_style = re.compile(r'url\(([^)]+)\)')
@@ -155,7 +156,7 @@ class Manager:
         soup = self.__get_soup(book_url)
         chapters = []
 
-        for chapter in soup.select("#chapters > ul > li"):
+        for chapter in soup.select("#chapters > ul > li, div#chapters-collapsed > li"):
             title_elm = chapter.select_one('h4')
 
             title = title_elm.find('a').text.strip()

@@ -4,5 +4,6 @@ beautifulsoup4
 peewee
 faker
 pyjnius
+plyer
 Cython
 buildozer
