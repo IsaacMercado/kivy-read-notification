@@ -2,6 +2,7 @@ kivy
 httpx
 beautifulsoup4
 peewee
+faker
 pyjnius
 Cython
 buildozer

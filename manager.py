@@ -1,10 +1,13 @@
+import random
 import re
+import time
+from dataclasses import dataclass, field
+
 from bs4 import BeautifulSoup
+from faker import Faker
 from httpx import Client
-from dataclasses import dataclass
 
-
-re_url_style = re.compile('url\(([^)]+)\)')
+re_url_style = re.compile(r'url\(([^)]+)\)')
 
 
 @dataclass
@@ -33,7 +36,35 @@ class Book:
     title: str
     url: str
     image: str
-    chapters: list[Chapter] = list
+    list_name: str = ''
+    chapters: list[Chapter] = field(default_factory=list)
+
+
+class RandomUserAgent:
+    def __init__(self):
+        self.fake = Faker()
+
+    def encode(self, encoding: str):
+        """Return a random user agent."""
+        return self.fake.user_agent().encode(encoding)
+
+
+def random_wait(low: float, high: float):
+    """Wait a random time."""
+    time.sleep(random.uniform(low, high))
+
+
+def random_wait_execute(low: float, high: float):
+    """Wait a random time before calling the function."""
+
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            random_wait(low, high)
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
 
 
 class Manager:
@@ -41,10 +72,14 @@ class Manager:
         self.__client = client
 
     def __get_soup(self, url: str, **kwargs) -> BeautifulSoup:
+        if not 'headers' in kwargs:
+            kwargs['headers'] = {'User-Agent': RandomUserAgent()}
         response = self.__client.get(url, **kwargs)
+        assert response.status_code == 200, response.text
         return BeautifulSoup(response.text, 'html.parser')
 
     def login(self, email: str, password: str, remember: bool = False):
+        """Login to the website."""
         soup = self.__get_soup('/login')
         csrf_token = soup.find('input', {'name': '_token'})['value']
 
@@ -56,6 +91,7 @@ class Manager:
                 'remember': remember,
                 '_token': csrf_token,
             },
+            headers={'User-Agent': RandomUserAgent()},
             follow_redirects=True,
         )
 
@@ -74,7 +110,8 @@ class Manager:
             ).find_all("a")
         }
 
-    def get_list(self, url: str):
+    def get_iter_books_from_list(self, url: str):
+        """Get books from a list url."""
         soup = self.__get_soup(url)
 
         while True:
@@ -109,8 +146,14 @@ class Manager:
 
             soup = self.__get_soup(next_page_button["href"])
 
-    def get_chapters(self, book_url: str):
+    def get_books_from_list(self, url: str):
+        """Get books from a list url."""
+        return list(self.get_iter_books_from_list(url))
+
+    def get_chapters_from_url(self, book_url: str) -> list[Chapter]:
+        """Get chapters from a book url."""
         soup = self.__get_soup(book_url)
+        chapters = []
 
         for chapter in soup.select("#chapters > ul > li"):
             title_elm = chapter.select_one('h4')
@@ -122,9 +165,8 @@ class Manager:
             options = []
 
             for group in chapter.select('div > div > ul > li > div[class="row"]'):
-                group_elm = group.select('div:nth-child(1) > span > a[href]')
                 groups = []
-                for group_elm in group_elm:
+                for group_elm in group.select('div:nth-child(1) > span > a[href]'):
                     group_title = group_elm.text
                     group_url = group_elm['href']
                     groups.append(Group(group_title, group_url))
@@ -143,17 +185,53 @@ class Manager:
 
                 options.append(Option(groups, date, lang, url))
 
-            yield Chapter(title, viewed, options)
+            chapters.append(Chapter(title, viewed, options))
 
-    def get_data(self):
-        for name, url in self.get_url_state().items():
-            book = next(self.get_list(url))
-            print(next(self.get_chapters(book.url)))
-            break
+        return chapters
+
+    def get_chapters_from_book(self, book: Book) -> list[Chapter]:
+        """Get chapters from a book."""
+        return self.get_chapters_from_url(book.url)
+
+    def load_chapters(self, book: Book):
+        """Load chapters from a book."""
+        book.chapters = self.get_chapters_from_book(book)
+        return book
+
+    def get_all_books(self):
+        """Get all books."""
+        states = self.get_url_state()
+        books: list[Book] = []
+
+        for name, _books in zip(
+            states.keys(),
+            map(
+                random_wait_execute(2.5, 10.0)(
+                    self.get_books_from_list
+                ),
+                states.values(),
+            )
+        ):
+            for book in _books:
+                book.list_name = name
+                books.append(book)
+
+        for index, books in enumerate(
+            map(
+                random_wait_execute(5.0, 30.0)(self.load_chapters),
+                books,
+            )
+        ):
+            print(f"Book {index + 1}/{ len(books) }: {books.title}")
+
+        return books
 
 
 if __name__ == '__main__':
-    with Client(base_url='https://visortmo.com') as client:
+    with Client(
+        base_url='https://visortmo.com',
+        timeout=30,
+    ) as client:
         manager = Manager(client)
-        manager.login('email', 'password')
-        manager.get_data()
+        manager.login("email", "password")
+        manager.get_all_books()

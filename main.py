@@ -1,61 +1,54 @@
 from os import listdir
 from textwrap import fill
 
+from kivy import platform
 from kivy.app import App
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.button import Button
-from kivy.uix.label import Label
+from kivy.properties import ObjectProperty  # pylint: disable=no-name-in-module
 
-from webview import WebView
+if platform == 'android':
+    from os import mkdir
+    from os.path import exists, join
+
+    from android.storage import app_storage_path  # pylint: disable=import-error
+    from jnius import autoclass
+
+    from webview import WebView
 
 
 class BrowserApp(App):
+    browser: "WebView | None" = ObjectProperty(None)
+
     def build(self):
-        self._create_local_file()
-        self.browser = None
-        b1 = Button(
-            text='Tap for Google.\nBack button/gesture to return.',
-            on_press=self.view_google,
-        )
-        b2 = Button(
-            text='Tap for local file.\nBack button/gesture to return.',
-            on_press=self.view_local_file,
-        )
-        b3 = Button(
-            text='List downloads',
-            on_press=self.view_downloads,
-        )
-        self.label = Label(text='')
-        box = BoxLayout(orientation='vertical')
-        box.add_widget(b1)
-        box.add_widget(b2)
-        box.add_widget(b3)
-        box.add_widget(self.label)
-        return box
+        if platform == 'android':
+            self._create_local_file()
 
-    def view_google(self, b):
-        self.browser = WebView(
-            'https://www.google.com',
-            enable_javascript=True,
-            enable_downloads=True,
-            enable_zoom=True,
-        )
+    def view_google(self):
+        if platform == 'android':
+            self.browser = WebView(
+                'https://www.google.com',
+                enable_javascript=True,
+                enable_downloads=True,
+                enable_zoom=True,
+            )
 
-    def view_local_file(self, b):
-        self.browser = WebView('file://'+self.filename)
+    def view_local_file(self):
+        if platform == 'android':
+            self.browser = WebView('file://'+self.filename)
 
-    def view_downloads(self, b):
+    def view_downloads(self):
+        label = self.root.ids['list_downloads']
+
         if self.browser:
-            d = self.browser.downloads_directory()
-            self.label.text = fill(d, 40) + '\n'
-            l = listdir(d)
+            directory = self.browser.downloads_directory()
+            label.text = fill(directory, 40) + '\n'
+            l = listdir(directory)
             if l:
-                for f in l:
-                    self.label.text += f + '\n'
+                for file in l:
+                    label.text += f'{file}\n'
             else:
-                self.label.text = 'No files downloaded'
+                label.text = 'No files downloaded'
         else:
-            self.label.text = 'Open a browser first'
+            label.text = 'Open a browser first'
 
     def on_pause(self):
         if self.browser:
@@ -67,13 +60,6 @@ class BrowserApp(App):
             self.browser.resume()
 
     def _create_local_file(self):
-        # Create a file for testing
-        from os import mkdir
-        from os.path import exists, join
-
-        from android.storage import app_storage_path
-        from jnius import autoclass
-
         Environment = autoclass('android.os.Environment')
         path = join(app_storage_path(), Environment.DIRECTORY_DOCUMENTS)
 

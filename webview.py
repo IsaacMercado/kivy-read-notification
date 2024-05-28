@@ -23,12 +23,14 @@
 #
 # Source https://github.com/Android-for-Python/Webview-Example
 
+from typing import Callable
+
 from android.runnable import run_on_ui_thread
 from jnius import PythonJavaClass, autoclass, cast, java_method
 from kivy.clock import Clock
 from kivy.uix.modalview import ModalView
 
-WebViewA = autoclass('android.webkit.WebView')
+WebViewAndroid = autoclass('android.webkit.WebView')
 WebViewClient = autoclass('android.webkit.WebViewClient')
 LayoutParams = autoclass('android.view.ViewGroup$LayoutParams')
 LinearLayout = autoclass('android.widget.LinearLayout')
@@ -49,8 +51,14 @@ class DownloadListener(PythonJavaClass):
     __javainterfaces__ = ['android/webkit/DownloadListener']
 
     @java_method('(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;J)V')
-    def onDownloadStart(self, url, userAgent, contentDisposition, mimetype,
-                        contentLength):
+    def onDownloadStart(
+        self,
+        url: str,
+        userAgent: str,
+        contentDisposition: str,
+        mimetype: str,
+        contentLength: int,
+    ):
         mActivity = PythonActivity.mActivity
         context = mActivity.getApplicationContext()
         visibility = DownloadManagerRequest.VISIBILITY_VISIBLE_NOTIFY_COMPLETED
@@ -60,8 +68,10 @@ class DownloadListener(PythonJavaClass):
         request = DownloadManagerRequest(uri)
         request.setNotificationVisibility(visibility)
         request.setDestinationInExternalFilesDir(context, dir_type, filepath)
-        dm = cast(DownloadManager,
-                  mActivity.getSystemService(Context.DOWNLOAD_SERVICE))
+        dm = cast(
+            DownloadManager,
+            mActivity.getSystemService(Context.DOWNLOAD_SERVICE),
+        )
         dm.enqueue(request)
 
 
@@ -75,9 +85,25 @@ class KeyListener(PythonJavaClass):
 
     @java_method('(Landroid/view/View;ILandroid/view/KeyEvent;)Z')
     def onKey(self, v, key_code, event):
-        if event.getAction() == KeyEvent.ACTION_DOWN and\
-           key_code == KeyEvent.KEYCODE_BACK:
+        if (
+            event.getAction() == KeyEvent.ACTION_DOWN
+            and key_code == KeyEvent.KEYCODE_BACK
+        ):
             return self.listener()
+
+
+class JavaScriptCallback(PythonJavaClass):
+    # https://developer.android.com/reference/android/webkit/ValueCallback
+    __javacontext__ = 'app'
+    __javainterfaces__ = ['android/webkit/ValueCallback']
+
+    def __init__(self, callback: Callable[[str], None]):
+        super().__init__()
+        self.callback = callback
+
+    @java_method('(Ljava/lang/String;)V')
+    def onReceiveValue(self, value: str):
+        self.callback(value)
 
 
 class WebView(ModalView):
@@ -105,7 +131,7 @@ class WebView(ModalView):
     @run_on_ui_thread
     def on_open(self):
         mActivity = PythonActivity.mActivity
-        webview = WebViewA(mActivity)
+        webview = WebViewAndroid(mActivity)
         webview.setWebViewClient(WebViewClient())
         webview.getSettings().setJavaScriptEnabled(self.enable_javascript)
         webview.getSettings().setBuiltInZoomControls(self.enable_zoom)
@@ -125,7 +151,8 @@ class WebView(ModalView):
 
         if self.cookies:
             for key, value in self.cookies.items():
-                CookieManager.getInstance().setCookie(self.url, f'{key}={value}')
+                CookieManager.getInstance().setCookie(
+                    self.url, f'{key}={value}')
 
         try:
             webview.loadUrl(self.url)
@@ -154,6 +181,10 @@ class WebView(ModalView):
             params.width = self.width
             params.height = self.height
             self.webview.setLayoutParams(params)
+
+    def evaluate_javascript(self, js: str, callback: Callable[[str], None] = None):
+        if self.enable_javascript and self.webview:
+            self.webview.evaluateJavascript(js, JavaScriptCallback(callback))
 
     def pause(self):
         if self.webview:
