@@ -3,3 +3,4 @@ __pycache__
 bin
 .buildozer
 *.db
+*.data

@@ -1,1 +1,1 @@
-from src.auth.screens.login import LoginScreen
+from src.auth.screens.login import LoginScreen, TextInputValidation

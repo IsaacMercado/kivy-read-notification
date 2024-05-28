@@ -7,3 +7,4 @@ pyjnius
 plyer
 Cython
 buildozer
+keyring; sys_platform == 'linux'

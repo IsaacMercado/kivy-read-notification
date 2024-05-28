@@ -13,19 +13,31 @@
             Label:
                 text: "Email"
 
-            TextInput:
+            TextInputValidation:
+                id: email
                 multiline: False
 
             Label:
                 text: "Password"
 
-            TextInput:
+            TextInputValidation:
+                id: password
                 multiline: False
+                password: True
+
+            BoxLayout:
+                orientation: "horizontal"
+                
+                Label:
+                    text: "Remember me"
+
+                CheckBox:
+                    id: remember_me
 
             Widget:
 
             Button:
                 text: "Login"
-                on_release: print('Hello')
+                on_release: root.login(email.text, password.text, remember_me.active)
 
         Widget:
