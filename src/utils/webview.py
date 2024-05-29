@@ -104,6 +104,41 @@ class WebView(ModalView):
         self.open()
 
     @run_on_ui_thread
+    def capture(self, callback: Callable[[tuple[int], bytes], None]):
+        if self.webview:
+            Bitmap = autoclass("android.graphics.Bitmap")
+            Bitmap.Config = autoclass("android.graphics.Bitmap$Config")
+            Bitmap.CompressFormat = autoclass(
+                "android.graphics.Bitmap"
+                "$CompressFormat"
+            )
+            Canvas = autoclass("android.graphics.Canvas")
+            ByteBuffer = autoclass("java.nio.ByteBuffer")
+
+            webview = self.webview
+            scale = webview.getScale()
+            height = webview.getContentHeight() * scale + 0.5
+
+            bitmap = Bitmap.createBitmap(
+                webview.getWidth(),
+                height,
+                Bitmap.Config.ARGB_8888,
+            )
+            canvas = Canvas(bitmap)
+            webview.draw(canvas)
+
+            buffer = ByteBuffer.allocate(
+                bitmap.getByteCount()
+            )
+            bitmap.copyPixelsToBuffer(buffer)
+            data = (
+                bitmap.getWidth(),
+                bitmap.getHeight(),
+            ), bytes(buffer.array())
+
+            callback(*data)
+
+    @run_on_ui_thread
     def on_open(self):
         mActivity = PythonActivity.mActivity
         webview = WebViewAndroid(mActivity)
@@ -160,7 +195,7 @@ class WebView(ModalView):
     def evaluate_javascript(self, js: str, callback: Callable[[str], None] = None):
         if self.enable_javascript and self.webview:
             if callback is None:
-                callback = lambda x: x
+                def callback(x): return x
             self.webview.evaluateJavascript(js, JavaScriptCallback(callback))
 
     def pause(self):
