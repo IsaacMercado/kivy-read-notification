@@ -1,11 +1,17 @@
 from kivy import platform
 from kivy.app import App
-from kivy.clock import Clock
+from kivy.clock import Clock, mainthread
 from kivy.properties import ObjectProperty  # pylint: disable=no-name-in-module
+from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.screenmanager import Screen
+from kivy.uix.stencilview import StencilView
 
 if platform == 'android':
-    from src.utils.webview import WebView
+    from src.utils.webview import WebView, bytes_to_texture
+
+
+class StencilAnchorLayout(AnchorLayout, StencilView):
+    pass
 
 
 class BookScreen(Screen):
@@ -24,22 +30,11 @@ class BookScreen(Screen):
 
     def capture(self, dt):
         if self.browser:
-            from kivy.clock import mainthread
-            from plyer import storagepath
+            self.browser.capture(self.set_image)
 
-            @mainthread
-            def save_buffer(data):
-                path = storagepath.get_downloads_dir()
-                filename = f'{path}/screenshot_copy.buffer'
-                print(f'Saving screenshot to {filename}')
-                with open(filename, 'wb') as file:
-                    file.write(data)
-
-            print(
-                self.browser.capture(
-                    lambda size, data: save_buffer(data) or print(size)
-                )
-            )
+    @mainthread
+    def set_image(self, size, data):
+        self.ids['book_image'].texture = bytes_to_texture(size, data)
 
     def on_pause(self):
         if self.browser:

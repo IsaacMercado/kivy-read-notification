@@ -6,3 +6,11 @@
         Button:
             text: 'Tap for Google.\nBack button/gesture to return.'
             on_press: root.view_google()
+
+        StencilAnchorLayout:
+            ScatterLayout:
+                do_rotation: False
+
+                Image:
+                    id: book_image
+                    size: self.texture_size

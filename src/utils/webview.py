@@ -2,8 +2,8 @@ from typing import Callable
 
 from android.runnable import run_on_ui_thread
 from jnius import PythonJavaClass, autoclass, cast, java_method
-from kivy.clock import Clock
 from kivy.uix.modalview import ModalView
+from kivy.graphics.texture import Texture
 
 WebViewAndroid = autoclass('android.webkit.WebView')
 WebViewClient = autoclass('android.webkit.WebViewClient')
@@ -80,6 +80,13 @@ class JavaScriptCallback(PythonJavaClass):
     def onReceiveValue(self, value: str):
         self.callback(value)
 
+
+def bytes_to_texture(size: tuple[int], data: bytes) -> Texture:
+    # https://kivy.org/doc/stable/api-kivy.graphics.texture.html
+    texture = Texture.create(size=size)
+    texture.blit_buffer(data, colorfmt='rgba', bufferfmt='ubyte')
+    texture.flip_vertical()
+    return texture
 
 class WebView(ModalView):
     # https://developer.android.com/reference/android/webkit/WebView
